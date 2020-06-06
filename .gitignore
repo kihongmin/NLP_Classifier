@@ -1,3 +1,2 @@
-*.zip
-*.vec
-data
+/data
+__pycache__.*
