@@ -43,7 +43,7 @@ class Preprocess:
     def load_data(self,path):
         return pd.read_csv(path, compression='zip')
 
-def load_pre_embedding(preprocessor):
+def load_pre_embedding(preprocessor,embedding_path=embedding_path):
     def get_coefs(word, *arr): return word, np.asarray(arr, dtype='float32')
     embeddings_index = dict(get_coefs(*o.rstrip().rsplit(' ')) for o in open(embedding_path))
 
