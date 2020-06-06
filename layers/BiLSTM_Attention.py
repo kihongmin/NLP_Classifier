@@ -1,38 +1,37 @@
 import tensorflow as tf
 import os, pickle, re
 from collections import Counter
-
-from tensorflow.keras.layers import Dense, Lambda, dot, Activation, concatenate, Layer, Bidirectional
-from tensorflow.keras import Model
-
+from tensorflow.keras.layers import Dense, Lambda, dot, Activation, concatenate, Layer, Bidirectional,Embedding, Dropout, LSTM
+from tensorflow.keras import Model, Input
 from sklearn.model_selection import train_test_split
 
-stop_eng = stopwords.words('english')
+tf.random.set_seed(1025)
 
 class Attention(Layer):
-    def __init__(self,hidden_size, **kwargs):
+    def __init__(self,hidden_size,attention_size=240, **kwargs):
         self.hidden_size = hidden_size
-        self.first_score = Dense(self.hidden_size,name='attention_score_vec')
-        self.h_t = Lambda(lambda x:x[:,-1,:], output_shape=(self.hidden_size,),name='last_hidden_state')
-        self.softmax = Activation('softmax',name='softmax')
-        self.attention_vector = Dense(256, activation='tanh',name='attention_vector')
+        self.attention_size = attention_size
+
+        self.v_t = Dense(hidden_size,name='v_t',activation='tanh')
+        self.w = tf.Variable(tf.random_normal_initializer(stddev=0.1,seed=1025)(shape=[attention_size]),True)
+        self.score = Activation('softmax',name='score')
+
         super(Attention, self).__init__(**kwargs)
 
     def call(self,hidden_states):
-        first_score = self.first_score(hidden_states)
-        h_t = self.h_t(first_score)
-        score = dot([first_score,h_t],[2,1],name='attention_score')
-        attention_weights = self.softmax(score)
-        context_vector = dot([hidden_states,attention_weights],[1,1],name='context_vector')
-        pre_activation = concatenate([context_vector,h_t],name='attention_output')
-        attention_vector = self.attention_vector(pre_activation)
-        return attention_vector
+        v = self.v_t(hidden_states)
+        vu = tf.tensordot(v, self.w, axes=1, name='vu')
 
-def build_model(maxlen=maxlen,embed_dim=embed_dim):
-    max_feature = max(preprocessor.tokenizer.index_word.keys())
-    inp = Input(shape=(maxlen,))
-    x = Embedding(max_feature,embed_dim)(inp)
-    x = Bidirectional(LSTM(100,return_sequences=True))(x)
+        score = self.score(vu)
+        output = tf.reduce_sum(hidden_states * tf.expand_dims(score,-1),1, name='attention_output')
+
+        return output
+
+
+def build_model(preprocessor,embedding_matrix):
+    inp = Input(shape=(preprocessor.maxlen,))
+    x = Embedding(preprocessor.max_features,preprocessor.embed_dim,weights=[embedding_matrix])(inp)
+    x = Bidirectional(LSTM(120,return_sequences=True))(x)
     x = Attention(x.shape[2])(x)
     x = Dropout(0.2)(x)
     x = Dense(6, activation="sigmoid")(x)
