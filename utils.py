@@ -7,7 +7,7 @@ from nltk.tokenize import word_tokenize
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import Callback
-
+from sklearn.metrics import roc_auc_score
 
 stop_eng = stopwords.words('english')
 
